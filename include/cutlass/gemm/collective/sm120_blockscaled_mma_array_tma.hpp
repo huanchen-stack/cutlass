@@ -743,7 +743,7 @@ struct CollectiveMma<
         using BarrierType = typename MainloopPipeline::ProducerBarrierType;
         BarrierType* tma_barrier = pipeline.producer_get_barrier(smem_pipe_write);
 
-#if 1
+#if 0
         // Skip actual TMA loads - use dummy/uninitialized shared memory values
         // Signal the barrier directly without issuing TMA loads
         // This skips global->shared memory movement while maintaining pipeline synchronization
