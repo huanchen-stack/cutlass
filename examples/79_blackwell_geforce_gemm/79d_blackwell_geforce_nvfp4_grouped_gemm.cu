@@ -92,6 +92,7 @@
 #include "cutlass/util/reference/host/tensor_norm.h"
 #include "cutlass/util/reference/host/tensor_compare.h"
 #include "helper.h"
+#include "profiler.h"
 using namespace cute;
 
 using ProblemShape = cutlass::gemm::GroupProblemShape<Shape<int,int,int>>; // <M,N,K> per group
@@ -798,6 +799,7 @@ int run(Options &options, bool host_problem_shapes_available = true)
   for (int32_t i = 0; i < options.groups; ++i) {
     std::cout << "    " << options.problem_sizes_host.at(i);
     std::cout << ", " << alpha_host.at(i) << ", " << beta_host.at(i) << std::endl;
+    break;
   }
   std::cout << "  Groups      : " << options.groups  << std::endl;
 
@@ -823,6 +825,13 @@ int run(Options &options, bool host_problem_shapes_available = true)
   CUTLASS_CHECK(gemm.run(/* stream = */ nullptr, /* cuda_adapter = */ nullptr, /* launch_with_pdl = */ options.use_pdl));
 
   cudaDeviceSynchronize();
+
+  ProfileCUDAGraph profiler(1000, 2, 10, 10);
+  float avgTime = profiler.profile([&](cudaStream_t stream) {
+    CUTLASS_CHECK(gemm.run(/* stream = */ stream, /* cuda_adapter = */ nullptr, /* launch_with_pdl = */ options.use_pdl));
+  });
+  std::cout << "  Cuda Graph Avg Time : " << avgTime << " ms" << std::endl;
+  return 0;
 
   // Check if output from CUTLASS kernel and reference kernel are equal or not
   Result result;

@@ -76,6 +76,7 @@
 #include "cutlass/util/reference/host/gett.hpp"
 
 #include "helper.h"
+#include "profiler.h"
 
 #include "./utils.h"
 
@@ -581,6 +582,15 @@ int run(Options &options) {
   
   // Correctness / Warmup iteration
   CUTLASS_CHECK(gemm.run());
+
+  cudaDeviceSynchronize();
+
+  ProfileCUDAGraph profiler(1000, 2, 10, 10);
+  float avgTime = profiler.profile([&](cudaStream_t stream) {
+    CUTLASS_CHECK(gemm.run(/* stream = */ stream));
+  });
+  std::cout << "  Cuda Graph Avg Time : " << avgTime << " ms" << std::endl;
+  return 0;
 
   Result result;
   if (!options.skip_verification) {

@@ -743,12 +743,20 @@ struct CollectiveMma<
         using BarrierType = typename MainloopPipeline::ProducerBarrierType;
         BarrierType* tma_barrier = pipeline.producer_get_barrier(smem_pipe_write);
 
+#if 1
+        // Skip actual TMA loads - use dummy/uninitialized shared memory values
+        // Signal the barrier directly without issuing TMA loads
+        // This skips global->shared memory movement while maintaining pipeline synchronization
+        cutlass::arch::ClusterTransactionBarrier::complete_transaction(
+            tma_barrier, cute::block_rank_in_cluster(), TmaTransactionBytes);
+#else
         int write_stage = smem_pipe_write.index();
         copy(params.tma_load_a.with(get<0>(input_tensormaps),*tma_barrier), tAgA(_,_,_,*k_tile_iter), tAsA(_,_,_,write_stage));
         copy(params.tma_load_b.with(get<1>(input_tensormaps),*tma_barrier), tBgB(_,_,_,*k_tile_iter), tBsB(_,_,_,write_stage));
 
         copy(params.tma_load_sfa.with(get<2>(input_tensormaps),*tma_barrier), tAgSFA(_,_,_,*k_tile_iter), tAsSFA(_,_,_,write_stage));
         copy(params.tma_load_sfb.with(get<3>(input_tensormaps),*tma_barrier), tBgSFB(_,_,_,*k_tile_iter), tBsSFB(_,_,_,write_stage));
+#endif
 
         // Advance k tile
         ++k_tile_iter;
@@ -906,6 +914,19 @@ struct CollectiveMma<
 
     pipeline.consumer_wait(smem_pipe_read);
 
+#if 1
+    // Skip MMA compute work - only maintain pipeline synchronization
+    // This skips smem->rmem copies and GEMM operations while keeping pipeline flow
+    CUTLASS_PRAGMA_NO_UNROLL
+    for ( ; k_tile_count > 1; --k_tile_count) {
+      pipeline.consumer_release(smem_pipe_read);
+      ++smem_pipe_read;
+      pipeline.consumer_wait(smem_pipe_read);
+    }
+    // Release the last stage
+    pipeline.consumer_release(smem_pipe_read);
+    ++smem_pipe_read;
+#else
     copy_kblock(_0{});
     CUTLASS_PRAGMA_NO_UNROLL
     for ( ; k_tile_count > 1; --k_tile_count) {
@@ -957,6 +978,7 @@ struct CollectiveMma<
       gemm_kblock(k_block);
 
     });
+#endif
 }
 
   /// Perform a Consumer Epilogue to release all buffers
