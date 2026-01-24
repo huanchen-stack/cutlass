@@ -743,7 +743,11 @@ struct CollectiveMma<
         using BarrierType = typename MainloopPipeline::ProducerBarrierType;
         BarrierType* tma_barrier = pipeline.producer_get_barrier(smem_pipe_write);
 
-#if 0
+#ifndef CUTLASS_DISABLE_TMA
+#define CUTLASS_DISABLE_TMA 0
+#endif
+
+#if CUTLASS_DISABLE_TMA
         // Skip actual TMA loads - use dummy/uninitialized shared memory values
         // Signal the barrier directly without issuing TMA loads
         // This skips global->shared memory movement while maintaining pipeline synchronization
@@ -914,7 +918,11 @@ struct CollectiveMma<
 
     pipeline.consumer_wait(smem_pipe_read);
 
-#if 1
+#ifndef CUTLASS_DISABLE_MMA
+#define CUTLASS_DISABLE_MMA 0
+#endif
+
+#if CUTLASS_DISABLE_MMA
     // Skip MMA compute work - only maintain pipeline synchronization
     // This skips smem->rmem copies and GEMM operations while keeping pipeline flow
     CUTLASS_PRAGMA_NO_UNROLL
