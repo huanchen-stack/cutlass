@@ -688,10 +688,15 @@ struct CollectiveMma<
       int thread_idx,
       uint32_t block_rank_in_cluster,
       TensorStorage& shared_tensors) {
+#ifndef CUTLASS_DISABLE_TMA
+#define CUTLASS_DISABLE_TMA 0
+#endif
     int lane_predicate = cute::elect_one_sync();
 
     if (lane_predicate) {
-
+    
+#if CUTLASS_DISABLE_TMA
+#else
       Tensor sA = make_tensor(make_smem_ptr(shared_tensors.smem_A.begin()), SmemLayoutA{});        // (BLK_M,BLK_K,PIPE)
       Tensor sB = make_tensor(make_smem_ptr(shared_tensors.smem_B.begin()), SmemLayoutB{});        // (BLK_N,BLK_K,PIPE)
       Tensor sSFA = make_tensor(make_smem_ptr(shared_tensors.smem_SFA.begin()), SmemLayoutSFA{});  // (BLK_M,BLK_K,PIPE)
@@ -729,6 +734,7 @@ struct CollectiveMma<
 
       Tensor tBgSFB = block_tma_sfb.partition_S(gSFB);                                        // (TMA,TMA_N,TMA_K,k)
       Tensor tBsSFB = block_tma_sfb.partition_D(sSFB);                                        // (TMA,TMA_N,TMA_K,PIPE)
+#endif
 
       // Mainloop
       CUTLASS_PRAGMA_NO_UNROLL
@@ -742,10 +748,6 @@ struct CollectiveMma<
 
         using BarrierType = typename MainloopPipeline::ProducerBarrierType;
         BarrierType* tma_barrier = pipeline.producer_get_barrier(smem_pipe_write);
-
-#ifndef CUTLASS_DISABLE_TMA
-#define CUTLASS_DISABLE_TMA 0
-#endif
 
 #if CUTLASS_DISABLE_TMA
         // Skip actual TMA loads - use dummy/uninitialized shared memory values
@@ -800,10 +802,15 @@ struct CollectiveMma<
       int thread_idx,
       TensorStorage& shared_tensors,
       [[maybe_unused]] Params const& params) {
+#ifndef CUTLASS_DISABLE_MMA
+#define CUTLASS_DISABLE_MMA 0
+#endif
     using namespace cute;
 
     static_assert(is_rmem<FrgTensorC>::value, "C tensor must be rmem resident.");
 
+#if CUTLASS_DISABLE_MMA
+#else
     clear(accum);
 
     Tensor sA = make_tensor(make_smem_ptr(shared_tensors.smem_A.begin()), SmemLayoutA{});         // (BLK_M,BLK_K,PIPE)
@@ -915,12 +922,9 @@ struct CollectiveMma<
       // (V,M) x (V,N) => (V,M,N)
       cute::gemm(tiled_mma, make_zip_tensor(tCrA(_,_,k_block), tCrSFA(_,_,k_block)), make_zip_tensor(tCrB(_,_,k_block), tCrSFB(_,_,k_block)), accum);
     };
+#endif
 
     pipeline.consumer_wait(smem_pipe_read);
-
-#ifndef CUTLASS_DISABLE_MMA
-#define CUTLASS_DISABLE_MMA 0
-#endif
 
 #if CUTLASS_DISABLE_MMA
     // Skip MMA compute work - only maintain pipeline synchronization
