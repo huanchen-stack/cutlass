@@ -576,6 +576,7 @@ public:
 
         // Execute the TMA load for C if needed
         if (is_C_load_needed) {
+          static_assert(is_C_load_needed, "In MoE GroupGemm, beta is always 0");
           if (issue_tma_load) {
             copy(params.tma_load_c.with(load_tensormap, *tma_barrier, mcast_mask),
                 bGS_gC(_,_,_,epi_m,epi_n), bGS_sC(_,_,_,load_pipe_producer_state.index()));
@@ -668,6 +669,12 @@ public:
     // Apply epilogue subtiling
     Tensor gD_epi = flat_divide(gD, EpilogueTile{});                             // (EPI_TILE_M,EPI_TILE_N,EPI_M,EPI_N)
 
+#ifndef CUTLASS_DISABLE_EPILOGUE
+#define CUTLASS_DISABLE_EPILOGUE 0
+#endif
+
+#if CUTLASS_DISABLE_EPILOGUE
+#else
     // Construct the corresponding pipelined smem tensors
     auto ptr_sC = shared_tensors.collective.smem_C.begin();
     auto ptr_sD = shared_tensors.collective.smem_D.begin();
@@ -791,10 +798,11 @@ public:
     // Thread synchronizer for previously issued waits or fences
     // to ensure visibility of smem reads/writes to threads or TMA unit
     auto synchronize = [&] () { cutlass::arch::NamedBarrier::sync(size(TiledMma{}), cutlass::arch::ReservedNamedBarriers::EpilogueBarrier); };
+#endif
 
     // Predication for TMA store (a single thread from one warp issues TMA store)
     bool issue_tma_store = ((thread_idx / NumThreadsPerWarp) == 0) && cute::elect_one_sync();
-
+    
     // In the reuse smem configuration we have StagesC smem buffers and at most StagesD committed TMA stores in flight.
     // The TMA store pipeline producer acquire returns when at most StagesD-1 committed stores are in-flight, so we can
     // only guarantee store completion after StagesD iterations, then we can begin issuing releases on the smem buffer locks.
@@ -805,6 +813,52 @@ public:
       load_wait_state.phase_ ^= 1;
     }
 
+#if CUTLASS_DISABLE_EPILOGUE
+    // Replaces the double for loop below with a single loop over all subtile iterations
+    int num_subtiles = size<2>(gD_epi) * size<3>(gD_epi);
+    bool is_producer_load_needed = fusion_callbacks.is_producer_load_needed();
+
+    CUTLASS_PRAGMA_UNROLL
+    for (int iter = 0; iter < num_subtiles; ++iter) {
+      if (subtile_idx != -1 && iter != subtile_idx) {
+        continue;
+      }
+
+      // LoadPipeline: consumer operations
+      if (is_producer_load_needed) {
+        load_pipeline.consumer_wait(load_wait_state);
+        if constexpr (not ReuseSmemC) {
+          load_pipeline.consumer_release(load_pipe_consumer_state);
+          // cutlass::arch::fence_view_async_shared();
+          ++load_pipe_consumer_state;
+        }
+        ++load_wait_state;
+      }
+      
+      // StorePipeline: producer operations
+      //    Store logic is in tma_store_fn [&]
+      if (issue_tma_store) {
+        store_pipeline.producer_commit(store_pipe_producer_state);
+      }
+      ++store_pipe_producer_state;
+      ++issued_stores;
+      
+      if (issue_tma_store) {
+        store_pipeline.producer_acquire(store_pipe_producer_state);
+      }
+      
+      if constexpr (ReuseSmemC) {
+        bool store_finished = issued_stores > StorePipeline::UnacquiredStages;
+        if (store_finished) {
+          if (is_producer_load_needed) {
+            load_pipeline.consumer_release(load_pipe_consumer_state);
+          }
+          ++load_pipe_consumer_state;
+        }
+      }
+    }
+#else
+    
     // We can delay issue of TMA store by one iteration to achieve better interleaving of non-TMA instructions
     // Sync requirements of smem reuse may preclude this optimization
     // Delayed stores cause delayed stage releases which causes deadlock when StagesC == StagesD
@@ -990,6 +1044,7 @@ public:
 
     // Post-loop fusion callback entry point
     cst_callbacks.end();
+#endif
 
     return cute::make_tuple(load_pipe_consumer_state, store_pipe_producer_state);
   }
