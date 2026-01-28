@@ -461,6 +461,10 @@ if (CUTLASS_DISABLE_MMA)
   list(APPEND CUTLASS_CUDA_NVCC_FLAGS -DCUTLASS_DISABLE_MMA=1)
 endif()
 
+if (CUTLASS_DISABLE_MMA)
+  list(APPEND CUTLASS_CUDA_NVCC_FLAGS -DCUTLASS_DISABLE_EPILOGUE=1)
+endif()
+
 if (CUTLASS_ENABLE_GDC_FOR_SM90)
   message(STATUS "Grid Dependency Control (GDC) is enabled for SM90 kernels (required for programmatic dependent launches).")
   list(APPEND CUTLASS_CUDA_FLAGS -DCUTLASS_ENABLE_GDC_FOR_SM90=1)
