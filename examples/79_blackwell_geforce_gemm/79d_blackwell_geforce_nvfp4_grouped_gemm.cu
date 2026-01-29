@@ -130,7 +130,7 @@ using OperatorClass       = cutlass::arch::OpClassBlockScaledTensorOp;      // E
 
 // Kernel Perf config
 // Cluster Shape fixed to 1x1x1
-using ThreadBlockShape    = Shape<_128,_128,_128>;
+using ThreadBlockShape    = Shape<_128,_32,_128>;
 using ClusterShape        = Shape<_1,_1,_1>;
 constexpr int OutputSFVectorSize = 16;
 

@@ -184,8 +184,10 @@ def run_experiment(m: int, groups: int) -> Optional[float]:
         EXECUTABLE,
         f"--alpha={FIXED_PARAMS['alpha']}",
         f"--beta={FIXED_PARAMS['beta']}",
-        f"--m={m}",
-        f"--n={FIXED_PARAMS['n']}",
+        # f"--m={m}",
+        # f"--n={FIXED_PARAMS['n']}",
+        f"--n={m}",
+        f"--m={FIXED_PARAMS['n']}",
         f"--k={FIXED_PARAMS['k']}",
         f"--groups={groups}",
     ]
