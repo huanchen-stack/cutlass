@@ -75,14 +75,14 @@ EXECUTABLE = (
 
 # 5 CMake configurations (in order from docstring)
 CMAKE_CONFIGS = [
-    # {"mma": 1, "tma": 1, "epilogue": 1},
-    # {"mma": 1, "tma": 0, "epilogue": 0},
-    # {"mma": 0, "tma": 1, "epilogue": 0},
-    # {"mma": 0, "tma": 0, "epilogue": 1},
+    {"mma": 1, "tma": 1, "epilogue": 1},
+    {"mma": 1, "tma": 0, "epilogue": 0},
+    {"mma": 0, "tma": 1, "epilogue": 0},
+    {"mma": 0, "tma": 0, "epilogue": 1},
     {"mma": 0, "tma": 1, "epilogue": 1},
     {"mma": 1, "tma": 0, "epilogue": 1},
     {"mma": 1, "tma": 1, "epilogue": 0},
-    # {"mma": 0, "tma": 0, "epilogue": 0},
+    {"mma": 0, "tma": 0, "epilogue": 0},
 ]
 
 # 15 experiment configurations (m x groups = 5 x 3)
