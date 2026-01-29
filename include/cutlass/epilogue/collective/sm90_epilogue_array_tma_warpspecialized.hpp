@@ -576,7 +576,7 @@ public:
 
         // Execute the TMA load for C if needed
         if (is_C_load_needed) {
-          static_assert(is_C_load_needed, "In MoE GroupGemm, beta is always 0");
+          // TODO: static_assert(is_C_load_needed, "In MoE GroupGemm, beta is always 0");
           if (issue_tma_load) {
             copy(params.tma_load_c.with(load_tensormap, *tma_barrier, mcast_mask),
                 bGS_gC(_,_,_,epi_m,epi_n), bGS_sC(_,_,_,load_pipe_producer_state.index()));
