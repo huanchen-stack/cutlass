@@ -857,6 +857,15 @@ public:
         }
       }
     }
+    // Prevent DCE (Dead Code Elimination) of upstream MMA by consuming accumulator
+    {
+      using ElementAccumulator = typename AccEngine::value_type;
+      volatile ElementAccumulator* dump = reinterpret_cast<volatile ElementAccumulator*>(
+          cute::raw_pointer_cast(shared_tensors.collective.smem_D.begin()));
+      for (int i = 0; i < cute::size(accumulators); ++i) {
+        dump[i] = accumulators(i);
+      }
+    }
 #else
     
     // We can delay issue of TMA store by one iteration to achieve better interleaving of non-TMA instructions
