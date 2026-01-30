@@ -955,7 +955,20 @@ public:
                                                                     consumer_warp_group_idx);
       }
 
+      // int while_loop_index=0;
       do {
+        // while_loop_index++;
+        // // print work tile info (only for Consumer0, once per warp group - single thread)
+        // if (warp_group_role == WarpGroupRole::Consumer0 && warp_idx_in_warp_group == 0 && lane_idx == 0 
+        // && blockIdx.x == 0 && blockIdx.y == 0 ) {
+        //   uint64_t timestamp;
+        //   asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(timestamp));
+        //   printf("[loop=%d, block=(%d,%d)] Work tile info: M_idx=%d, N_idx=%d, L_idx=%d, timestamp=%llu ms\n", 
+        //          while_loop_index, blockIdx.x, blockIdx.y,
+        //          work_tile_info.M_idx, work_tile_info.N_idx, work_tile_info.L_idx,
+        //          (unsigned long long)(timestamp / 1000000));
+        // }
+
         if constexpr (IsGroupedGemmKernel) {
           problem_shape_MNKL = append<4>(params.problem_shape.get_problem_shape(work_tile_info.L_idx), 1);
         }

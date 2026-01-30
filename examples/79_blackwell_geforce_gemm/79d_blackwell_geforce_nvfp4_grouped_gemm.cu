@@ -758,7 +758,9 @@ bool verify(const Options &options) {
       >
     mainloop_params{tensor_A, tensor_SFA, tensor_B, tensor_SFB};
 
-    auto tensor_C = cute::make_tensor(make_iterator(block_C.at(i).host_data()), layout_C);
+    // auto tensor_C = cute::make_tensor(make_iterator(block_C.at(i).host_data()), layout_C);
+    auto tensor_C = cute::make_tensor(cute::recast_ptr<ElementC>(nullptr), layout_C); // Ignored for MoE Grouped GEMM
+
     auto tensor_ref_D = cute::make_tensor(make_iterator(block_ref_D.at(i).host_data()), layout_D);
     auto tensor_ref_SFD = cute::make_tensor(make_iterator(block_ref_SFD.at(i).host_data()), layout_SFD);
 
@@ -824,6 +826,7 @@ int run(Options &options, bool host_problem_shapes_available = true)
   // Correctness / Warmup iteration
   CUTLASS_CHECK(gemm.run(/* stream = */ nullptr, /* cuda_adapter = */ nullptr, /* launch_with_pdl = */ options.use_pdl));
 
+  return 0;
   cudaDeviceSynchronize();
 
   ProfileCUDAGraph profiler(1000, 2, 10, 10);
@@ -927,8 +930,8 @@ int main(int argc, char const **args) {
   // Evaluate CUTLASS kernels
   //
 
-  std::cout << "Running kernel with Cooperative kernel schedule:" << std::endl;
-  run<Gemm>(options, false /*host_problem_shapes_available*/);
+  // std::cout << "Running kernel with Cooperative kernel schedule:" << std::endl;
+  // run<Gemm>(options, false /*host_problem_shapes_available*/);
   std::cout << "Running kernel with Pingpong kernel schedule:" << std::endl;
   run<GemmPingpong>(options, false /*host_problem_shapes_available*/);
 #endif
