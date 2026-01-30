@@ -40,6 +40,11 @@
 #include "cute/int_tuple.hpp"
 #include "cute/atom/mma_traits_sm100.hpp"
 
+
+#ifndef CUTLASS_TB_N32
+#define CUTLASS_TB_N32 0
+#endif
+
 namespace cutlass::detail {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,13 +53,26 @@ using namespace cute;
 template<int SFVecSize, UMMA::Major major = UMMA::Major::K>
 struct Sm1xxBlockScaledBasicChunk {
 
+#if CUTLASS_TB_N32
   using Blk_MN    = _32;
+#else
+  using Blk_MN    = _128;
+#endif
+
   using Blk_SF    =   _4; 
 
+#if CUTLASS_TB_N32
   using SfKMajorAtom  = Layout< Shape< Shape<_8,_4>, Shape<Int<SFVecSize>, _4>>, 
                                Stride<Stride<_16,_4>, Stride<           _0, _1>>>;
   using SfMNMajorAtom = Layout< Shape< Shape<Int<SFVecSize>, _4>,  Shape<_8,_4>>, 
                                Stride<Stride<            _0, _1>, Stride<_16,_4>>>;
+#else
+  using SfKMajorAtom  = Layout< Shape< Shape<_32,_4>, Shape<Int<SFVecSize>, _4>>, 
+                               Stride<Stride<_16,_4>, Stride<           _0, _1>>>;
+  using SfMNMajorAtom = Layout< Shape< Shape<Int<SFVecSize>, _4>,  Shape<_32,_4>>,
+                                Stride<Stride<            _0, _1>, Stride<_16,_4>>>;
+#endif
+
   using SfAtom    = cute::conditional_t<major == UMMA::Major::K, SfKMajorAtom, SfMNMajorAtom>;
 };
 
@@ -145,8 +163,15 @@ struct Sm1xxBlockScaledConfig {
 
     constexpr int MMA_NSF = TiledMma::K / SFVecSize;
     // Basic storage block for new Scaling Factor Layouts
+
+#if CUTLASS_TB_N32
     using mnBasicBlockShape  =  Shape<_8,_4>;
     using mnBasicBlockStride = Stride<_4,_4>;
+#else
+    using mnBasicBlockShape  =  Shape<_32,_4>;
+    using mnBasicBlockStride = Stride<_16,_4>;
+#endif
+
     using kBasicBlockShape  = Shape<Int<SFVecSize>, Int<MMA_NSF>>;
     using kBasicBlockStride = Stride<_0, _1>;
 
@@ -222,10 +247,22 @@ struct Sm1xxBlockScaledOutputConfig {
 struct Sm1xxBlockScaledTensorConfig {
   // k-major order
   // The blockscaled tensor does not need to know vectorsize
+
+#if CUTLASS_TB_N32
   using Blk_M = _32;
+#else
+  using Blk_M = _128;
+#endif
+
   using Blk_N =   _4; 
+
+#if CUTLASS_TB_N32
   using SfAtom = Layout< Shape< Shape<_8,_4>,  Shape<_4>>, 
                         Stride<Stride<_16,_4>, Stride<_1>>>;
+#else
+  using SfAtom = Layout< Shape< Shape<_32,_4>,  Shape<_4>>, 
+                        Stride<Stride<_16,_4>, Stride<_1>>>;
+#endif
 
   template <class ProblemShape>
   CUTE_HOST_DEVICE

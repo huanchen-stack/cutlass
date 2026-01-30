@@ -130,7 +130,15 @@ using OperatorClass       = cutlass::arch::OpClassBlockScaledTensorOp;      // E
 
 // Kernel Perf config
 // Cluster Shape fixed to 1x1x1
+#ifndef CUTLASS_TB_N32
+#define CUTLASS_TB_N32 0
+#endif
+#if CUTLASS_TB_N32
 using ThreadBlockShape    = Shape<_128,_32,_128>;
+#else
+using ThreadBlockShape    = Shape<_128,_128,_128>;
+#endif
+
 using ClusterShape        = Shape<_1,_1,_1>;
 constexpr int OutputSFVectorSize = 16;
 
@@ -826,7 +834,7 @@ int run(Options &options, bool host_problem_shapes_available = true)
   // Correctness / Warmup iteration
   CUTLASS_CHECK(gemm.run(/* stream = */ nullptr, /* cuda_adapter = */ nullptr, /* launch_with_pdl = */ options.use_pdl));
 
-  return 0;
+  // return 0;
   cudaDeviceSynchronize();
 
   ProfileCUDAGraph profiler(1000, 2, 10, 10);

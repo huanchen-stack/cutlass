@@ -184,7 +184,15 @@ struct CollectiveBuilder<
   using Blk_Elems = decltype(Blk_MN{} * Blk_SF{});
 
   // Basic storage block for new Scaling Factor Layouts
+#ifndef CUTLASS_TB_N32
+#define CUTLASS_TB_N32 0
+#endif
+#if CUTLASS_TB_N32
   using mnBasicBlockShape  =  Shape<_8,_4>;
+#else
+  using mnBasicBlockShape  =  Shape<_32,_4>;
+#endif
+
   using mnBasicBlockStride = Stride<_16,_4>;
   using kBasicBlockShape  = Shape<Int<SFVectorSize>, Int<MMA_NSF>>;
   using kBasicBlockStride = Stride<_0, _1>;
