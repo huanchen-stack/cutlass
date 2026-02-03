@@ -172,7 +172,7 @@ def create_plots(sorted_data: dict):
     - 8 bars per m value (one per config), side by side
     """
     for groups in GROUPS_VALUES:
-        fig, ax = plt.subplots(figsize=(16, 7))
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         x = np.arange(len(M_VALUES))  # x locations for the groups
         width = 0.10  # width of each bar (smaller for 8 bars)

@@ -69,21 +69,21 @@ from pathlib import Path
 from typing import Optional
 
 # Constants
-BUILD_DIR = "/workspace/cutlass/build"
+BUILD_DIR = "/home/huanchen/cutlass/build"
 LOG_FILE = Path(__file__).parent / "results.log"
 EXECUTABLE = (
-    "./examples/79_blackwell_geforce_gemm/79e_blackwell_geforce_nvfp4_grouped_gemm"
+    "./examples/79_blackwell_geforce_gemm/79f_blackwell_geforce_mxfp8_grouped_gemm"
 )
 
 # 5 CMake configurations (in order from docstring)
 CMAKE_CONFIGS = [
     {"mma": 1, "tma": 1, "epilogue": 1},
-    {"mma": 1, "tma": 0, "epilogue": 0},
-    {"mma": 0, "tma": 1, "epilogue": 0},
-    {"mma": 0, "tma": 0, "epilogue": 1},
+    # {"mma": 1, "tma": 0, "epilogue": 0},
+    # {"mma": 0, "tma": 1, "epilogue": 0},
+    # {"mma": 0, "tma": 0, "epilogue": 1},
     {"mma": 0, "tma": 1, "epilogue": 1},
     {"mma": 1, "tma": 0, "epilogue": 1},
-    {"mma": 1, "tma": 1, "epilogue": 0},
+    # {"mma": 1, "tma": 1, "epilogue": 0},
     {"mma": 0, "tma": 0, "epilogue": 0},
 ]
 
@@ -103,7 +103,7 @@ def run_cmake(config: dict) -> bool:
         f"-DCUTLASS_DISABLE_TMA={config['tma']}",
         f"-DCUTLASS_DISABLE_EPILOGUE={config['epilogue']}",
 
-        f"-DCUTLASS_TB_N32=1",
+        # f"-DCUTLASS_TB_N32=1",
 
     ]
     print(f"[CMAKE] {' '.join(cmd)}")
@@ -130,7 +130,7 @@ def run_cmake(config: dict) -> bool:
 
 def run_make() -> bool:
     """Compile the target. Returns True on success."""
-    cmd = ["make", "79e_blackwell_geforce_nvfp4_grouped_gemm"]
+    cmd = ["make", "79f_blackwell_geforce_mxfp8_grouped_gemm"]
     print(f"[MAKE] {' '.join(cmd)}")
     try:
         result = subprocess.run(
@@ -155,7 +155,7 @@ def run_make() -> bool:
 
 def parse_pingpong_time(output: str) -> Optional[float]:
     """
-    Extract Avg kernel time from 79e output.
+    Extract Avg kernel time from 79f output.
 
     The output format is:
         Running Pingpong kernel with L2 cache busting:
@@ -169,7 +169,7 @@ def parse_pingpong_time(output: str) -> Optional[float]:
           TFLOPS          : 46.5055
     """
     # Find the section marker
-    marker = "Running Pingpong kernel with L2 cache busting:"
+    marker = "with L2 cache busting:"
     if marker not in output:
         return None
 
@@ -191,11 +191,11 @@ def run_experiment(m: int, groups: int) -> Optional[float]:
         EXECUTABLE,
         f"--alpha={FIXED_PARAMS['alpha']}",
         f"--beta={FIXED_PARAMS['beta']}",
-        # f"--m={m}",
-        # f"--n={FIXED_PARAMS['n']}",
+        f"--m={m}",
+        f"--n={FIXED_PARAMS['n']}",
 
-        f"--n={m}",
-        f"--m={FIXED_PARAMS['n']}",
+        # f"--n={m}",
+        # f"--m={FIXED_PARAMS['n']}",
         
         f"--k={FIXED_PARAMS['k']}",
         f"--groups={groups}",
