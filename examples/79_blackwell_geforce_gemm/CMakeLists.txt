@@ -80,4 +80,9 @@ cutlass_example_add_executable(
   TEST_RANDOM_PERF_LARGE_GROUP
 )  
 
+cutlass_example_add_executable(
+  79e_blackwell_geforce_nvfp4_grouped_gemm
+  79e_blackwell_geforce_nvfp4_grouped_gemm.cu
+)  
+
 endif()

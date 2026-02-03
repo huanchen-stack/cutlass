@@ -2,13 +2,13 @@
 in /workspace/cutlass/build, there are three instructions you should know:
 
 1. how to compile with "disable" flags
-cmake .. -DCUTLASS_NVCC_ARCHS=120a -DCUTLASS_DISABLE_MMA=1 -DCUTLASS_DISABLE_TMA=1 -DCUTLASS_DISABLE_EPILOGUE=1
+cmake .. -DCUTLASS_NVCC_ARCHS=120a -DCUTLASS_DISABLE_MMA=0 -DCUTLASS_DISABLE_TMA=0 -DCUTLASS_DISABLE_EPILOGUE=0
 
 2. how to compile executable
-make 79d_blackwell_geforce_nvfp4_grouped_gemm
+make 79e_blackwell_geforce_nvfp4_grouped_gemm
 
 3. how to run experiments
-./examples/79_blackwell_geforce_gemm/79d_blackwell_geforce_nvfp4_grouped_gemm --alpha=1 --beta=0 --m=2048 --n=2048 --k=2048 --groups=8
+./examples/79_blackwell_geforce_gemm/79e_blackwell_geforce_nvfp4_grouped_gemm --alpha=1 --beta=0 --m=32 --n=768 --k=2048 --groups=128
 
 Configurations for -D flags:
 {
@@ -43,19 +43,21 @@ Configurations for experiments:
 so in total there will be 5x15 = 75 experiments.
 
 each experiment will generate an output like this:
-Running kernel with Cooperative kernel schedule:
-  Problem Sizes, Alpha, Beta
-    (2048,2048,2048), 1, 0
-  Groups      : 8
-  Cuda Graph Avg Time : 0.0192365 ms
-Running kernel with Pingpong kernel schedule:
-  Problem Sizes, Alpha, Beta
-    (2048,2048,2048), 1, 0
-  Groups      : 8
-  Cuda Graph Avg Time : 0.0196333 ms
+(base) huanchen@HS:~/cutlass/build$ ./examples/79_blackwell_geforce_gemm/79e_blackwell_geforce_nvfp4_grouped_gemm --alpha=1 --beta=0 --m=32 --n=768 --k=2048 --groups=16
+L2 Cache Size    : 48 MB
+Workspace Count  : 11
+Running Pingpong kernel with L2 cache busting:
+  Problem Sizes, Alpha, Beta 
+    (32,768,2048), 1, 0
+  Groups         : 16
+  Workspace Count: 11
+  Graph iterations: 22
+  Total graph time: 0.76192 ms
+  Avg kernel time : 0.0346327 ms
+  TFLOPS          : 46.5055
 
-you should extract the last time (cuda graph avg time (ping pong schedule)) as a float number.
-there are total 75 float numbers in total, store them in a .log file where each line is a json string.
+you should extract the Avg kernel time as a float number.
+store them in a .log file where each line is a json string.
 print results to the .log file as soon as the experiment is done.
 """
 
@@ -67,10 +69,10 @@ from pathlib import Path
 from typing import Optional
 
 # Constants
-BUILD_DIR = "/workspace/cutlass/build"
+BUILD_DIR = "/home/huanchen/cutlass/build"
 LOG_FILE = Path(__file__).parent / "results.log"
 EXECUTABLE = (
-    "./examples/79_blackwell_geforce_gemm/79d_blackwell_geforce_nvfp4_grouped_gemm"
+    "./examples/79_blackwell_geforce_gemm/79e_blackwell_geforce_nvfp4_grouped_gemm"
 )
 
 # 5 CMake configurations (in order from docstring)
@@ -100,6 +102,9 @@ def run_cmake(config: dict) -> bool:
         f"-DCUTLASS_DISABLE_MMA={config['mma']}",
         f"-DCUTLASS_DISABLE_TMA={config['tma']}",
         f"-DCUTLASS_DISABLE_EPILOGUE={config['epilogue']}",
+
+        f"-DCUTLASS_TB_N32=1"
+
     ]
     print(f"[CMAKE] {' '.join(cmd)}")
     try:
@@ -125,7 +130,7 @@ def run_cmake(config: dict) -> bool:
 
 def run_make() -> bool:
     """Compile the target. Returns True on success."""
-    cmd = ["make", "79d_blackwell_geforce_nvfp4_grouped_gemm"]
+    cmd = ["make", "79e_blackwell_geforce_nvfp4_grouped_gemm"]
     print(f"[MAKE] {' '.join(cmd)}")
     try:
         result = subprocess.run(
@@ -150,28 +155,30 @@ def run_make() -> bool:
 
 def parse_pingpong_time(output: str) -> Optional[float]:
     """
-    Extract Pingpong schedule's Cuda Graph Avg Time from output.
+    Extract Avg kernel time from 79e output.
 
     The output format is:
-        Running kernel with Pingpong kernel schedule:
-          Problem Sizes, Alpha, Beta
-            (2048,2048,2048), 1, 0
-          Groups      : 8
-          Cuda Graph Avg Time : 0.0196333 ms
-
-    We need to find the time after "Pingpong kernel schedule" section.
+        Running Pingpong kernel with L2 cache busting:
+          Problem Sizes, Alpha, Beta 
+            (32,768,2048), 1, 0
+          Groups         : 16
+          Workspace Count: 11
+          Graph iterations: 22
+          Total graph time: 0.76192 ms
+          Avg kernel time : 0.0346327 ms
+          TFLOPS          : 46.5055
     """
-    # Split output to find the Pingpong section
-    pingpong_marker = "Running kernel with Pingpong kernel schedule:"
-    if pingpong_marker not in output:
+    # Find the section marker
+    marker = "Running Pingpong kernel with L2 cache busting:"
+    if marker not in output:
         return None
 
-    # Get the section after Pingpong marker
-    pingpong_section = output.split(pingpong_marker)[1]
+    # Get the section after the marker
+    section = output.split(marker)[1]
 
-    # Find the first "Cuda Graph Avg Time" in that section
-    pattern = r"Cuda Graph Avg Time\s*:\s*([\d.]+)\s*ms"
-    match = re.search(pattern, pingpong_section)
+    # Find "Avg kernel time : X.XXX ms"
+    pattern = r"Avg kernel time\s*:\s*([\d.]+)\s*ms"
+    match = re.search(pattern, section)
 
     if match:
         return float(match.group(1))
@@ -186,8 +193,10 @@ def run_experiment(m: int, groups: int) -> Optional[float]:
         f"--beta={FIXED_PARAMS['beta']}",
         # f"--m={m}",
         # f"--n={FIXED_PARAMS['n']}",
+
         f"--n={m}",
         f"--m={FIXED_PARAMS['n']}",
+        
         f"--k={FIXED_PARAMS['k']}",
         f"--groups={groups}",
     ]
