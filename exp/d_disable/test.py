@@ -69,7 +69,7 @@ from pathlib import Path
 from typing import Optional
 
 # Constants
-BUILD_DIR = "/home/huanchen/cutlass/build"
+BUILD_DIR = "/workspace/cutlass/build"
 LOG_FILE = Path(__file__).parent / "results.log"
 EXECUTABLE = (
     "./examples/79_blackwell_geforce_gemm/79e_blackwell_geforce_nvfp4_grouped_gemm"
@@ -103,7 +103,7 @@ def run_cmake(config: dict) -> bool:
         f"-DCUTLASS_DISABLE_TMA={config['tma']}",
         f"-DCUTLASS_DISABLE_EPILOGUE={config['epilogue']}",
 
-        f"-DCUTLASS_TB_N32=1"
+        f"-DCUTLASS_TB_N32=1",
 
     ]
     print(f"[CMAKE] {' '.join(cmd)}")
