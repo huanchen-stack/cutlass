@@ -85,4 +85,9 @@ cutlass_example_add_executable(
   79e_blackwell_geforce_nvfp4_grouped_gemm.cu
 )  
 
+cutlass_example_add_executable(
+  79f_blackwell_geforce_mxfp8_grouped_gemm
+  79f_blackwell_geforce_mxfp8_grouped_gemm.cu
+)  
+
 endif()
