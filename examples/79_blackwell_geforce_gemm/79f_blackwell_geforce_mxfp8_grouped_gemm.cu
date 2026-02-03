@@ -120,7 +120,15 @@ using OperatorClass       = cutlass::arch::OpClassBlockScaledTensorOp;    // Ope
 
 // Kernel Perf config
 // Cluster Shape fixed to 1x1x1
+#ifndef CUTLASS_TB_N32
+#define CUTLASS_TB_N32 0
+#endif
+#if CUTLASS_TB_N32
+using ThreadBlockShape    = Shape<_128,_32,_128>;
+#else
 using ThreadBlockShape    = Shape<_128,_128,_128>;
+#endif
+
 using ClusterShape        = Shape<_1,_1,_1>;
 
 // Simple linear combination epilogue: D = alpha * acc + beta * C

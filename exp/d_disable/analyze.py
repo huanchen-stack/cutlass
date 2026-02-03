@@ -40,11 +40,11 @@ CONFIG_ORDER = [
     # Enable only ONE component (two disabled)
     (0, 1, 1),  # MMA enabled only
     (1, 0, 1),  # TMA enabled only
-    (1, 1, 0),  # Epilogue enabled only
-    # Disable only ONE component (two enabled)
-    (1, 0, 0),  # MMA disabled only
-    (0, 1, 0),  # TMA disabled only
-    (0, 0, 1),  # Epilogue disabled only
+    # (1, 1, 0),  # Epilogue enabled only
+    # # Disable only ONE component (two enabled)
+    # (1, 0, 0),  # MMA disabled only
+    # (0, 1, 0),  # TMA disabled only
+    # (0, 0, 1),  # Epilogue disabled only
     # All enabled (top)
     (0, 0, 0),
 ]
@@ -53,10 +53,10 @@ CONFIG_LABELS = {
     (1, 1, 1): "All disabled",
     (0, 1, 1): "MMA only",
     (1, 0, 1): "TMA only",
-    (1, 1, 0): "Epilogue only",
-    (1, 0, 0): "MMA disabled",
-    (0, 1, 0): "TMA disabled",
-    (0, 0, 1): "Epilogue disabled",
+    # (1, 1, 0): "Epilogue only",
+    # (1, 0, 0): "MMA disabled",
+    # (0, 1, 0): "TMA disabled",
+    # (0, 0, 1): "Epilogue disabled",
     (0, 0, 0): "All enabled",
 }
 
@@ -65,10 +65,10 @@ CONFIG_COLORS = {
     (1, 1, 1): "#d62728",  # red - all disabled
     (0, 1, 1): "#ff9896",  # light red - MMA only
     (1, 0, 1): "#98df8a",  # light green - TMA only
-    (1, 1, 0): "#c5b0d5",  # light purple - Epilogue only
-    (1, 0, 0): "#ff7f0e",  # orange - MMA disabled
-    (0, 1, 0): "#2ca02c",  # green - TMA disabled
-    (0, 0, 1): "#9467bd",  # purple - Epilogue disabled
+    # (1, 1, 0): "#c5b0d5",  # light purple - Epilogue only
+    # (1, 0, 0): "#ff7f0e",  # orange - MMA disabled
+    # (0, 1, 0): "#2ca02c",  # green - TMA disabled
+    # (0, 0, 1): "#9467bd",  # purple - Epilogue disabled
     (0, 0, 0): "#1f77b4",  # blue - all enabled
 }
 
