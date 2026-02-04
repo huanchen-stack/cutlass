@@ -31,17 +31,40 @@
 
 
 /*! \file
-    \brief MXFP8 Grouped GEMM with BF16 output and L2 cache busting using workspace rotation.
+    \brief MX-format Grouped GEMM with BF16 output and L2 cache busting using workspace rotation.
 
-    This example is based on 79e_blackwell_geforce_nvfp4_grouped_gemm but uses:
-    - MXFP8 (mx_float8_t<float_e4m3_t>) for both A and B matrices
-    - BF16 output (no block scale factor generation)
-    - Simple LinearCombination epilogue
+    This example supports configurable input formats for A and B matrices via compile-time defines.
+    Supported formats: MXFP8 (e4m3, e5m2), MXFP6 (e3m2, e2m3), MXFP4
 
     Features:
+    - Compile-time configurable input formats for A and B matrices
+    - BF16 output with simple LinearCombination epilogue
     - Multiple workspace sets to avoid L2 cache camping during profiling
     - Inline CUDA graph profiling with workspace rotation
     - Auto-calculation of workspace count based on L2 cache size
+
+    Build Instructions:
+    
+    Default build (MXFP8 e4m3 for both A and B):
+      $ cmake .. -DCUTLASS_NVCC_ARCHS=120a
+      $ cmake --build . --target 79f_blackwell_geforce_mxfp8_grouped_gemm
+
+    Custom format build (e.g., MXFP8 A, MXFP6 B):
+      $ cmake .. -DCUTLASS_NVCC_ARCHS=120a -DCMAKE_CUDA_FLAGS="-DELEMENT_A_FORMAT=1 -DELEMENT_B_FORMAT=3"
+      $ cmake --build . --target 79f_blackwell_geforce_mxfp8_grouped_gemm
+
+    Format codes:
+      1 = MXFP8_E4M3  (mx_float8_t<float_e4m3_t>, 8-bit)
+      2 = MXFP8_E5M2  (mx_float8_t<float_e5m2_t>, 8-bit)
+      3 = MXFP6_E3M2  (mx_float6_t<float_e3m2_t>, 6-bit)
+      4 = MXFP6_E2M3  (mx_float6_t<float_e2m3_t>, 6-bit)
+      5 = MXFP4       (mx_float4_t<float_e2m1_t>, 4-bit)
+
+    Example format combinations:
+      -DELEMENT_A_FORMAT=1 -DELEMENT_B_FORMAT=1  # MXFP8 x MXFP8 (default)
+      -DELEMENT_A_FORMAT=1 -DELEMENT_B_FORMAT=3  # MXFP8 x MXFP6
+      -DELEMENT_A_FORMAT=1 -DELEMENT_B_FORMAT=5  # MXFP8 x MXFP4
+      -DELEMENT_A_FORMAT=3 -DELEMENT_B_FORMAT=3  # MXFP6 x MXFP6
 
     To run this example:
 
@@ -88,20 +111,85 @@ using namespace cute;
 
 using ProblemShape = cutlass::gemm::GroupProblemShape<Shape<int,int,int>>; // <M,N,K> per group
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/// Format selection via preprocessor defines
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Format enum values for preprocessor selection
+#define MXFP8_E4M3  1
+#define MXFP8_E5M2  2
+#define MXFP6_E3M2  3
+#define MXFP6_E2M3  4
+#define MXFP4       5
+
+// Default formats if not specified at compile time
+#ifndef ELEMENT_A_FORMAT
+#define ELEMENT_A_FORMAT MXFP8_E4M3
+#endif
+
+#ifndef ELEMENT_B_FORMAT
+#define ELEMENT_B_FORMAT MXFP8_E4M3
+#endif
+
+// Helper macros for format name strings
+#define FORMAT_NAME_1 "MXFP8_E4M3"
+#define FORMAT_NAME_2 "MXFP8_E5M2"
+#define FORMAT_NAME_3 "MXFP6_E3M2"
+#define FORMAT_NAME_4 "MXFP6_E2M3"
+#define FORMAT_NAME_5 "MXFP4"
+
+#define FORMAT_NAME_HELPER(x) FORMAT_NAME_##x
+#define FORMAT_NAME(x) FORMAT_NAME_HELPER(x)
+
+#define ELEMENT_A_FORMAT_STR FORMAT_NAME(ELEMENT_A_FORMAT)
+#define ELEMENT_B_FORMAT_STR FORMAT_NAME(ELEMENT_B_FORMAT)
+
 #if 1 or defined(CUTLASS_ARCH_MMA_SM120_SUPPORTED) || defined(CUTLASS_ARCH_MMA_SM121_SUPPORTED)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /// GEMM kernel configurations
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-// A matrix configuration - MXFP8
-using         ElementA    = cutlass::mx_float8_t<cutlass::float_e4m3_t>;  // Element type for A matrix operand
-using         LayoutATag  = cutlass::layout::RowMajor;                    // Layout type for A matrix operand
-constexpr int AlignmentA  = 16;                                           // 128 bits / 8 bits = 16 elements
+// A matrix configuration - selected via ELEMENT_A_FORMAT
+#if ELEMENT_A_FORMAT == MXFP8_E4M3
+  using         ElementA    = cutlass::mx_float8_t<cutlass::float_e4m3_t>;
+  constexpr int AlignmentA  = 16;   // 128 bits / 8 bits = 16 elements
+#elif ELEMENT_A_FORMAT == MXFP8_E5M2
+  using         ElementA    = cutlass::mx_float8_t<cutlass::float_e5m2_t>;
+  constexpr int AlignmentA  = 16;   // 128 bits / 8 bits = 16 elements
+#elif ELEMENT_A_FORMAT == MXFP6_E3M2
+  using         ElementA    = cutlass::mx_float6_t<cutlass::float_e3m2_t>;
+  constexpr int AlignmentA  = 128;  // Special alignment for 6-bit formats
+#elif ELEMENT_A_FORMAT == MXFP6_E2M3
+  using         ElementA    = cutlass::mx_float6_t<cutlass::float_e2m3_t>;
+  constexpr int AlignmentA  = 128;  // Special alignment for 6-bit formats
+#elif ELEMENT_A_FORMAT == MXFP4
+  using         ElementA    = cutlass::mx_float4_t<cutlass::float_e2m1_t>;
+  constexpr int AlignmentA  = 32;   // 128 bits / 4 bits = 32 elements
+#else
+  #error "Unknown ELEMENT_A_FORMAT. Use 1-5 (MXFP8_E4M3, MXFP8_E5M2, MXFP6_E3M2, MXFP6_E2M3, MXFP4)"
+#endif
+using         LayoutATag  = cutlass::layout::RowMajor;
 
-// B matrix configuration - MXFP8
-using         ElementB    = cutlass::mx_float8_t<cutlass::float_e4m3_t>;  // Element type for B matrix operand
-using         LayoutBTag  = cutlass::layout::ColumnMajor;                 // Layout type for B matrix operand
-constexpr int AlignmentB  = 16;                                           // 128 bits / 8 bits = 16 elements
+// B matrix configuration - selected via ELEMENT_B_FORMAT
+#if ELEMENT_B_FORMAT == MXFP8_E4M3
+  using         ElementB    = cutlass::mx_float8_t<cutlass::float_e4m3_t>;
+  constexpr int AlignmentB  = 16;   // 128 bits / 8 bits = 16 elements
+#elif ELEMENT_B_FORMAT == MXFP8_E5M2
+  using         ElementB    = cutlass::mx_float8_t<cutlass::float_e5m2_t>;
+  constexpr int AlignmentB  = 16;   // 128 bits / 8 bits = 16 elements
+#elif ELEMENT_B_FORMAT == MXFP6_E3M2
+  using         ElementB    = cutlass::mx_float6_t<cutlass::float_e3m2_t>;
+  constexpr int AlignmentB  = 128;  // Special alignment for 6-bit formats
+#elif ELEMENT_B_FORMAT == MXFP6_E2M3
+  using         ElementB    = cutlass::mx_float6_t<cutlass::float_e2m3_t>;
+  constexpr int AlignmentB  = 128;  // Special alignment for 6-bit formats
+#elif ELEMENT_B_FORMAT == MXFP4
+  using         ElementB    = cutlass::mx_float4_t<cutlass::float_e2m1_t>;
+  constexpr int AlignmentB  = 32;   // 128 bits / 4 bits = 32 elements
+#else
+  #error "Unknown ELEMENT_B_FORMAT. Use 1-5 (MXFP8_E4M3, MXFP8_E5M2, MXFP6_E3M2, MXFP6_E2M3, MXFP4)"
+#endif
+using         LayoutBTag  = cutlass::layout::ColumnMajor;
 
 // C/D matrix configuration - BF16
 using         ElementD    = cutlass::bfloat16_t;                          // Element type for D matrix operand
@@ -290,7 +378,12 @@ struct Options {
   std::string benchmark_path;
   std::vector<typename ProblemShape::UnderlyingProblemShape> problem_sizes_host;
   int const tma_alignment_bits = 128;
-  int const alignment = tma_alignment_bits / 8;  // For MXFP8: 8 bits per element
+  // Use the maximum alignment required by A, B, C, D for random problem generation
+  static constexpr int alignment = []() constexpr {
+    int align = AlignmentA > AlignmentB ? AlignmentA : AlignmentB;
+    constexpr int alignC = 128 / cutlass::sizeof_bits<ElementC>::value;
+    return align > alignC ? align : alignC;
+  }();
 
   // Parses the command line
   void parse(int argc, char const **args) {
@@ -476,16 +569,20 @@ int calculate_workspace_count(const Options& options, const cudaDeviceProp& prop
     return options.workspace_count;
   }
 
+  // Calculate bits per element for A and B based on compile-time format selection
+  constexpr int BitsPerElementA = cutlass::sizeof_bits<typename ElementA::DataType>::value;
+  constexpr int BitsPerElementB = cutlass::sizeof_bits<typename ElementB::DataType>::value;
+
   // Calculate total bytes for one workspace (all groups)
   int64_t total_bytes = 0;
   for (const auto& problem : options.problem_sizes_host) {
     auto M = get<0>(problem);
     auto N = get<1>(problem);
     auto K = get<2>(problem);
-    // MXFP8 tensors: A(M×K), B(K×N) at 1 byte/element
+    // A(M×K), B(K×N) - size depends on format
     // C, D are bfloat16 (2 bytes/element)
-    total_bytes += int64_t(M) * K;        // A (MXFP8, 1 byte)
-    total_bytes += int64_t(K) * N;        // B (MXFP8, 1 byte)
+    total_bytes += (int64_t(M) * K * BitsPerElementA) / 8;  // A
+    total_bytes += (int64_t(K) * N * BitsPerElementB) / 8;  // B
     total_bytes += int64_t(M) * N * 2;    // C (BF16, 2 bytes)
     total_bytes += int64_t(M) * N * 2;    // D (BF16, 2 bytes)
   }
@@ -493,7 +590,7 @@ int calculate_workspace_count(const Options& options, const cudaDeviceProp& prop
   int64_t l2_size = props.l2CacheSize;
   // Want total workspace >= 3x L2 to ensure eviction
   int count = std::max(1, (int)((3 * l2_size) / std::max(total_bytes, int64_t(1))) + 1);
-  return std::min(count, 64);  // Cap at 64
+  return std::min(count + 1, 64);  // Cap at 64
 }
 
 /// Helper to initialize a block of device data
@@ -908,7 +1005,8 @@ int main(int argc, char const **args) {
 
   std::cout << "L2 Cache Size    : " << (props.l2CacheSize >> 20) << " MB" << std::endl;
   std::cout << "Workspace Count  : " << workspace_count << std::endl;
-  // return 0;
+  std::cout << "Element A Format : " << ELEMENT_A_FORMAT_STR << std::endl;
+  std::cout << "Element B Format : " << ELEMENT_B_FORMAT_STR << std::endl;
 
   allocate(options, workspace_count);
   initialize(options, workspace_count);
@@ -917,7 +1015,7 @@ int main(int argc, char const **args) {
   // Evaluate CUTLASS kernels
   //
 
-  std::cout << "Running MXFP8 Pingpong kernel with L2 cache busting:" << std::endl;
+  std::cout << "Running MX-format Grouped GEMM with L2 cache busting:" << std::endl;
   run(options, workspace_count);
 #endif
 
