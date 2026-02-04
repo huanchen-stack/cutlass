@@ -80,7 +80,7 @@ from multiprocessing import Pool, cpu_count
 from dataclasses import dataclass
 
 # Constants
-CUTLASS_ROOT = Path("/home/huanchen/cutlass")
+CUTLASS_ROOT = Path("/workspace/cutlass")
 BUILD_DIR = CUTLASS_ROOT / "build"
 TEMP_BUILD_ROOT = CUTLASS_ROOT / "build_temp"
 LOG_FILE = Path(__file__).parent / "results_mx.log"
