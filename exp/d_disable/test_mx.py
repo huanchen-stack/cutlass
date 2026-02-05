@@ -108,7 +108,10 @@ CUDA_FLAGS_CONFIGS = [
 ]
 
 # 5 experiment configurations (m values with fixed groups=128)
-M_VALUES = [32, 64, 128, 256, 512]
+M_VALUES = [
+    32, 
+    # 64, 128, 256, 512
+]
 FIXED_PARAMS = {"alpha": 1, "beta": 0, "n": 768, "k": 2048, "groups": 128}
 
 
@@ -201,7 +204,7 @@ def compile_one_config(config: CompileConfig) -> Tuple[str, bool, str]:
             f"-DCUTLASS_DISABLE_MMA={config.disable_mma}",
             f"-DCUTLASS_DISABLE_TMA={config.disable_tma}",
             f"-DCUTLASS_DISABLE_EPILOGUE={config.disable_epilogue}",
-            "-DCUTLASS_TB_N32=1",
+            "-DCUTLASS_TB_N32=0",
             f"-DCMAKE_CUDA_FLAGS=-DELEMENT_A_FORMAT={config.format_A} -DELEMENT_B_FORMAT={config.format_B}",
         ]
         

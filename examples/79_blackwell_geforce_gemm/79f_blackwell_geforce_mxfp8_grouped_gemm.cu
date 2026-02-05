@@ -264,7 +264,10 @@ using CollectiveMainloopPingpong = typename cutlass::gemm::collective::Collectiv
   ThreadBlockShape, ClusterShape,
   cutlass::gemm::collective::StageCountAutoCarveout<
   static_cast<int>(sizeof(typename CollectiveEpilogue::SharedStorage))>,
-  cutlass::gemm::collective::KernelScheduleAuto
+  
+  cutlass::gemm::KernelPtrArrayTmaWarpSpecializedPingpong
+  // cutlass::gemm::collective::KernelScheduleAuto
+
 >::CollectiveOp;
 
 using GemmKernelPingpong = cutlass::gemm::kernel::GemmUniversal<

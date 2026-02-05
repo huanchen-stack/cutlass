@@ -765,6 +765,10 @@ select_instr() {
       || (SfVectorSize == 64 && cute::is_base_of_v<KernelScheduleBlockScaledSparseGemmSm100, BuilderScheduleTag>
       || (SfVectorSize == 32 && cute::is_base_of_v<KernelScheduleBlockScaledGemmSm120, BuilderScheduleTag>)
       || (SfVectorSize == 64 && cute::is_base_of_v<KernelScheduleBlockScaledSparseGemmSm120, BuilderScheduleTag>)
+
+      || (SfVectorSize == 32 && cute::is_same_v<BuilderScheduleTag, KernelPtrArrayTmaWarpSpecializedPingpong>)
+      || (SfVectorSize == 64 && cute::is_same_v<BuilderScheduleTag, KernelPtrArrayTmaWarpSpecializedPingpong>)
+
         ), "Incorrect SfVectorSize for MX_F4F6F8 is deduced.");
       return detail::blockscaled::BlockScaledInstr::MXF4F6F8;
     }
