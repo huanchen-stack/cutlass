@@ -1,0 +1,12 @@
+{"disable_mma": 1, "disable_tma": 1, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP8", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.0116427, "error": null}
+{"disable_mma": 1, "disable_tma": 1, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP6", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.0113, "error": null}
+{"disable_mma": 1, "disable_tma": 1, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP4", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.0112416, "error": null}
+{"disable_mma": 0, "disable_tma": 1, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP8", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.0255893, "error": null}
+{"disable_mma": 0, "disable_tma": 1, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP6", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.025412, "error": null}
+{"disable_mma": 0, "disable_tma": 1, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP4", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.0268832, "error": null}
+{"disable_mma": 1, "disable_tma": 0, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP8", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.137936, "error": null}
+{"disable_mma": 1, "disable_tma": 0, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP6", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.107992, "error": null}
+{"disable_mma": 1, "disable_tma": 0, "disable_epilogue": 1, "format_A": "MXFP8", "format_B": "MXFP4", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.0773024, "error": null}
+{"disable_mma": 0, "disable_tma": 0, "disable_epilogue": 0, "format_A": "MXFP8", "format_B": "MXFP8", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.142597, "error": null}
+{"disable_mma": 0, "disable_tma": 0, "disable_epilogue": 0, "format_A": "MXFP8", "format_B": "MXFP6", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.113096, "error": null}
+{"disable_mma": 0, "disable_tma": 0, "disable_epilogue": 0, "format_A": "MXFP8", "format_B": "MXFP4", "m": 32, "n": 768, "k": 2048, "groups": 128, "time_ms": 0.0813088, "error": null}

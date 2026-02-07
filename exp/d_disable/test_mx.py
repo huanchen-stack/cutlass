@@ -110,7 +110,7 @@ CUDA_FLAGS_CONFIGS = [
 # 5 experiment configurations (m values with fixed groups=128)
 M_VALUES = [
     32, 
-    # 64, 128, 256, 512
+    64, 128, 256, 512
 ]
 FIXED_PARAMS = {"alpha": 1, "beta": 0, "n": 768, "k": 2048, "groups": 128}
 
@@ -204,11 +204,13 @@ def compile_one_config(config: CompileConfig) -> Tuple[str, bool, str]:
             f"-DCUTLASS_DISABLE_MMA={config.disable_mma}",
             f"-DCUTLASS_DISABLE_TMA={config.disable_tma}",
             f"-DCUTLASS_DISABLE_EPILOGUE={config.disable_epilogue}",
-            "-DCUTLASS_TB_N32=0",
-            f"-DCMAKE_CUDA_FLAGS=-DELEMENT_A_FORMAT={config.format_A} -DELEMENT_B_FORMAT={config.format_B}",
+            "-DCUTLASS_TB_N32=1",
+            # f"-DCMAKE_CUDA_FLAGS=-DELEMENT_A_FORMAT={config.format_A} -DELEMENT_B_FORMAT={config.format_B}",
+            f"-DCMAKE_CUDA_FLAGS=-DELEMENT_A_FORMAT={config.format_B} -DELEMENT_B_FORMAT={config.format_A}",
         ]
         
         print(f"[CMAKE] {config.config_id}: Starting cmake...")
+        print(f"\t\tCommand: {' '.join(cmake_cmd)}")
         
         # Run cmake in temp build directory
         result = subprocess.run(
@@ -310,11 +312,15 @@ def run_experiment(executable_path: Path, m: int) -> Optional[float]:
         str(executable_path),
         f"--alpha={FIXED_PARAMS['alpha']}",
         f"--beta={FIXED_PARAMS['beta']}",
-        f"--m={m}",
-        f"--n={FIXED_PARAMS['n']}",
+        # f"--m={m}",
+        # f"--n={FIXED_PARAMS['n']}",
+        f"--n={m}",
+        f"--m={FIXED_PARAMS['n']}",
+
         f"--k={FIXED_PARAMS['k']}",
         f"--groups={FIXED_PARAMS['groups']}",
     ]
+    print(f"\t\tCommand: {' '.join(cmd)}")
     
     try:
         result = subprocess.run(
